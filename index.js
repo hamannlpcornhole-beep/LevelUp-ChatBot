@@ -169,6 +169,28 @@ function getRandomDelay() {
   return Math.floor(Math.random() * (90000 - 30000 + 1)) + 30000;
 }
 
+async function sendTypingOn(recipientId) {
+  try {
+    await axios.post(
+      `https://graph.facebook.com/v19.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`,
+      { recipient: { id: recipientId }, sender_action: 'typing_on' }
+    );
+  } catch (err) {
+    console.error('Typing indicator error:', err.message);
+  }
+}
+
+async function sendTypingOff(recipientId) {
+  try {
+    await axios.post(
+      `https://graph.facebook.com/v19.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`,
+      { recipient: { id: recipientId }, sender_action: 'typing_off' }
+    );
+  } catch (err) {
+    console.error('Typing off error:', err.message);
+  }
+}
+
 app.get('/webhook', (req, res) => {
   const mode = req.query['hub.mode'];
   const token = req.query['hub.verify_token'];
@@ -197,7 +219,6 @@ app.post('/webhook', async (req, res) => {
       if (!messageText) continue;
 
       if (isEcho) {
-        // Any message YOU send automatically pauses the bot for that conversation
         const recipientId = event.recipient.id;
         pausedConversations.add(recipientId);
         messageCountSinceGavin[recipientId] = 0;
@@ -205,11 +226,19 @@ app.post('/webhook', async (req, res) => {
         continue;
       }
 
-      // Track how many messages customer has sent since Gavin last responded
+      // Detect "this is gavin" anywhere in the message — pause bot
+      const lowerText = messageText.toLowerCase();
+      if (lowerText.includes('this is gavin')) {
+        pausedConversations.add(senderId);
+        messageCountSinceGavin[senderId] = 0;
+        console.log(`Gavin phrase detected — bot paused for ${senderId}`);
+        continue;
+      }
+
+      // Track messages since Gavin last replied
       if (pausedConversations.has(senderId)) {
         messageCountSinceGavin[senderId] = (messageCountSinceGavin[senderId] || 0) + 1;
         console.log(`Customer sent message ${messageCountSinceGavin[senderId]} since Gavin — still paused`);
-        // Auto resume after 3 unanswered messages from customer
         if (messageCountSinceGavin[senderId] >= 3) {
           pausedConversations.delete(senderId);
           messageCountSinceGavin[senderId] = 0;
@@ -225,11 +254,14 @@ app.post('/webhook', async (req, res) => {
         conversations[senderId] = conversations[senderId].slice(-20);
       }
 
+      await sendTypingOn(senderId);
+
       const delay = getRandomDelay();
       console.log(`Waiting ${delay/1000}s before responding to ${senderId}`);
       await new Promise(resolve => setTimeout(resolve, delay));
 
       if (pausedConversations.has(senderId)) {
+        await sendTypingOff(senderId);
         console.log(`Bot was paused during delay for ${senderId}, skipping`);
         continue;
       }
@@ -255,6 +287,8 @@ app.post('/webhook', async (req, res) => {
         const reply = response.data.content[0].text;
         conversations[senderId].push({ role: 'assistant', content: reply });
 
+        await sendTypingOff(senderId);
+
         await axios.post(
           `https://graph.facebook.com/v19.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`,
           { recipient: { id: senderId }, message: { text: reply } }
@@ -262,6 +296,7 @@ app.post('/webhook', async (req, res) => {
 
         console.log(`Replied to ${senderId}: ${reply.substring(0, 50)}...`);
       } catch (err) {
+        await sendTypingOff(senderId);
         console.error('Error:', err.response?.data || err.message);
       }
     }
