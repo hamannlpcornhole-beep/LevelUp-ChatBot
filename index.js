@@ -218,20 +218,21 @@ app.post('/webhook', async (req, res) => {
 
       if (!messageText) continue;
 
+      // Check for Gavin phrase FIRST regardless of who sent it
+      const lowerText = messageText.toLowerCase();
+      if (lowerText.includes('this is gavin')) {
+        const targetId = isEcho ? event.recipient.id : senderId;
+        pausedConversations.add(targetId);
+        messageCountSinceGavin[targetId] = 0;
+        console.log(`Gavin phrase detected — bot paused for ${targetId}`);
+        continue;
+      }
+
       if (isEcho) {
         const recipientId = event.recipient.id;
         pausedConversations.add(recipientId);
         messageCountSinceGavin[recipientId] = 0;
         console.log(`You sent a message — bot paused for ${recipientId}`);
-        continue;
-      }
-
-      // Detect "this is gavin" anywhere in the message — pause bot
-      const lowerText = messageText.toLowerCase();
-      if (lowerText.includes('this is gavin')) {
-        pausedConversations.add(senderId);
-        messageCountSinceGavin[senderId] = 0;
-        console.log(`Gavin phrase detected — bot paused for ${senderId}`);
         continue;
       }
 
