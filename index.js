@@ -166,7 +166,7 @@ const pausedConversations = new Set();
 const messageCountSinceGavin = {};
 
 function getRandomDelay() {
-  return Math.floor(Math.random() * (90000 - 30000 + 1)) + 30000;
+  return Math.floor(Math.random() * (60000 - 30000 + 1)) + 30000;
 }
 
 async function sendTypingOn(recipientId) {
@@ -214,7 +214,8 @@ app.post('/webhook', async (req, res) => {
 
       const senderId = event.sender.id;
       const messageText = event.message.text;
-      const isEcho = event.message.is_echo;
+      // FIX — explicitly check for true to handle undefined correctly
+      const isEcho = event.message.is_echo === true;
 
       if (!messageText) continue;
 
