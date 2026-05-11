@@ -218,32 +218,35 @@ app.post('/webhook', async (req, res) => {
 
       if (!messageText) continue;
 
+      console.log(`Message received — echo: ${isEcho}, text: ${messageText.substring(0, 50)}`);
+
       // Check for Gavin phrase FIRST regardless of who sent it
       const lowerText = messageText.toLowerCase();
       if (lowerText.includes('this is gavin')) {
         const targetId = isEcho ? event.recipient.id : senderId;
         pausedConversations.add(targetId);
         messageCountSinceGavin[targetId] = 0;
-        console.log(`Gavin phrase detected — bot paused for ${targetId}`);
+        console.log(`GAVIN DETECTED — bot paused for ${targetId}`);
         continue;
       }
 
+      // Any echo message (sent FROM your page) also pauses the bot
       if (isEcho) {
         const recipientId = event.recipient.id;
         pausedConversations.add(recipientId);
         messageCountSinceGavin[recipientId] = 0;
-        console.log(`You sent a message — bot paused for ${recipientId}`);
+        console.log(`ECHO MESSAGE — bot paused for ${recipientId}`);
         continue;
       }
 
       // Track messages since Gavin last replied
       if (pausedConversations.has(senderId)) {
         messageCountSinceGavin[senderId] = (messageCountSinceGavin[senderId] || 0) + 1;
-        console.log(`Customer sent message ${messageCountSinceGavin[senderId]} since Gavin — still paused`);
+        console.log(`PAUSED — customer message ${messageCountSinceGavin[senderId]} since Gavin for ${senderId}`);
         if (messageCountSinceGavin[senderId] >= 3) {
           pausedConversations.delete(senderId);
           messageCountSinceGavin[senderId] = 0;
-          console.log(`Auto resumed for ${senderId} after 3 unanswered messages`);
+          console.log(`AUTO RESUMED for ${senderId} after 3 unanswered messages`);
         } else {
           continue;
         }
@@ -258,12 +261,13 @@ app.post('/webhook', async (req, res) => {
       await sendTypingOn(senderId);
 
       const delay = getRandomDelay();
-      console.log(`Waiting ${delay/1000}s before responding to ${senderId}`);
+      console.log(`WAITING ${delay/1000}s before responding to ${senderId}`);
       await new Promise(resolve => setTimeout(resolve, delay));
 
+      // Check again if paused during delay
       if (pausedConversations.has(senderId)) {
         await sendTypingOff(senderId);
-        console.log(`Bot was paused during delay for ${senderId}, skipping`);
+        console.log(`PAUSED DURING DELAY — skipping response for ${senderId}`);
         continue;
       }
 
@@ -295,10 +299,10 @@ app.post('/webhook', async (req, res) => {
           { recipient: { id: senderId }, message: { text: reply } }
         );
 
-        console.log(`Replied to ${senderId}: ${reply.substring(0, 50)}...`);
+        console.log(`REPLIED to ${senderId}: ${reply.substring(0, 50)}...`);
       } catch (err) {
         await sendTypingOff(senderId);
-        console.error('Error:', err.response?.data || err.message);
+        console.error('ERROR:', err.response?.data || err.message);
       }
     }
   }
