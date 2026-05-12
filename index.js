@@ -43,6 +43,9 @@ WHEN PRO PROGRAM MAKES SENSE:
 - They are serious and committed
 - They've tried fixing it themselves and it hasn't worked
 
+SUBSCRIPTION POLICY:
+The Pro Program does NOT auto-renew or resubscribe automatically. Members must manually purchase each month. If someone asks about automatic renewal or resubscription, clearly tell them: "The Pro Program does not renew automatically — you'll need to purchase each month manually at levelupcornhole.shop"
+
 WHEN TO START WITH A SMALLER SERVICE:
 - They are newer to competitive play
 - They have a specific single issue they want fixed fast
