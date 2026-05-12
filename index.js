@@ -172,14 +172,6 @@ function getRandomDelay() {
   return Math.floor(Math.random() * (60000 - 30000 + 1)) + 30000;
 }
 
-function checkIfGavinInHistory(history) {
-  // Check last 5 messages for "this is gavin"
-  const recentMessages = history.slice(-5);
-  return recentMessages.some(msg => 
-    msg.content && msg.content.toLowerCase().includes('this is gavin')
-  );
-}
-
 async function sendTypingOn(recipientId) {
   try {
     await axios.post(
@@ -231,26 +223,22 @@ app.post('/webhook', async (req, res) => {
 
       console.log(`MSG — echo:${isEcho} sender:${senderId} text:${messageText.substring(0, 40)}`);
 
-      // Check for Gavin phrase in current message
-      const lowerText = messageText.toLowerCase();
-      if (lowerText.includes('this is gavin')) {
-        const targetId = isEcho ? event.recipient.id : senderId;
-        pausedConversations.add(targetId);
-        messageCountSinceGavin[targetId] = 0;
-        console.log(`GAVIN DETECTED IN MESSAGE — paused for ${targetId}`);
-        continue;
-      }
-
-      // Any echo message pauses the bot
+      // ECHO = message sent FROM your page
       if (isEcho) {
         const recipientId = event.recipient.id;
-        pausedConversations.add(recipientId);
-        messageCountSinceGavin[recipientId] = 0;
-        console.log(`ECHO — paused for ${recipientId}`);
+        const lowerText = messageText.toLowerCase();
+
+        // ONLY pause if Gavin explicitly says "this is gavin"
+        if (lowerText.includes('this is gavin')) {
+          pausedConversations.add(recipientId);
+          messageCountSinceGavin[recipientId] = 0;
+          console.log(`GAVIN DETECTED — paused for ${recipientId}`);
+        }
+        // All other echo messages (bot replies) — do nothing
         continue;
       }
 
-      // Track messages since Gavin last replied
+      // Incoming customer message — check if paused
       if (pausedConversations.has(senderId)) {
         messageCountSinceGavin[senderId] = (messageCountSinceGavin[senderId] || 0) + 1;
         console.log(`PAUSED — msg ${messageCountSinceGavin[senderId]} from ${senderId}`);
@@ -269,14 +257,6 @@ app.post('/webhook', async (req, res) => {
         conversations[senderId] = conversations[senderId].slice(-20);
       }
 
-      // Check conversation history for "this is gavin" — pause if found
-      if (checkIfGavinInHistory(conversations[senderId])) {
-        pausedConversations.add(senderId);
-        messageCountSinceGavin[senderId] = 0;
-        console.log(`GAVIN DETECTED IN HISTORY — paused for ${senderId}`);
-        continue;
-      }
-
       await sendTypingOn(senderId);
 
       const delay = getRandomDelay();
@@ -290,13 +270,6 @@ app.post('/webhook', async (req, res) => {
         if (pausedConversations.has(senderId)) {
           wasPaused = true;
           console.log(`PAUSED DURING DELAY at ${elapsed/1000}s for ${senderId}`);
-          break;
-        }
-        // Also check history during delay
-        if (checkIfGavinInHistory(conversations[senderId])) {
-          wasPaused = true;
-          pausedConversations.add(senderId);
-          console.log(`GAVIN IN HISTORY DURING DELAY — paused for ${senderId}`);
           break;
         }
       }
