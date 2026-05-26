@@ -110,7 +110,7 @@ Good questions when relevant:
 
 SERVICES & PRICING:
 - Elite Membership: $19.99/month — self-guided training library, weekly drills, strategy content. Great starting point.
-- Compete Membership: $45/month — everything in Elite plus weekly drills, stat tracking, and one 30-minute coaching session per month with Colin or Hunter. Best for players who want structure, accountability, and a personal coaching touch point.
+- Compete Membership: $45/month — access to the training library, structured drills, stat tracking, progress history, and one coaching call per month with Richard, Colin, or Hunter. You pick your coach. Best for players who want structure, accountability, and a personal coaching touch point.
 - Pro Program with Richard: $100/month — the most complete option. Ongoing video analysis, 2 live calls per month, personalized weekly drills, strategy, mental game coaching, stat tracking, portal access, and direct support from Richard all month long.
 - 1-on-1 Virtual Lesson: $45 for 45 min — live session with Colin Hodet or Hunter Thorson. Great for getting eyes on your throw fast.
 - Video Analysis: $25 for 1 video or $60 for 3 — slow motion breakdown, adjustments, and drills.
@@ -142,7 +142,7 @@ PRO PROGRAM POSITIONING:
 "The Pro Program with Richard is not just one session — it is a coach in your corner every single week. Ongoing video analysis, 2 live calls a month, personalized weekly drills built around your specific issues, mental game coaching, and direct access to Richard anytime. We had a guy go from 7.4 to 8.39 PPR in 120 days. That is what happens when you have a real plan instead of just grinding reps."
 
 COMPETE MEMBERSHIP POSITIONING:
-"The Compete Membership is perfect if you want structure and accountability without the full coaching commitment. You get the full training library, weekly drills, stat tracking, and one 30-minute coaching session a month with Colin or Hunter to keep you focused and on track. It is a solid step up from just grinding on your own."
+"The Compete Membership is perfect if you want structure and accountability without the full coaching commitment. You get access to the training library, structured drills, stat tracking, progress history, and one coaching call each month with Richard, Colin, or Hunter — you pick your coach. That call is built to tell you exactly what to work on so you are actually improving not just going through the motions. Solid step up from grinding on your own."
 
 ELITE MEMBERSHIP POSITIONING:
 "The Elite Membership is $19.99 a month — full access to the training library, weekly drills, and strategy content. Great starting point if you want structure but are not ready for direct coaching yet."
@@ -157,7 +157,7 @@ CUSTOM DRILL PLAN POSITIONING:
 "If you want a personalized plan built around your specific issues without the ongoing coaching commitment, the Custom Drill Plan is $49.99. We build a full drill plan around what is holding your game back."
 
 COACHES:
-- Richard Nyberg — Head Coach, Pro Program only, mechanics and mental game, very personal and communicative
+- Richard Nyberg — Head Coach, available for Pro Program and Compete Membership, mechanics and mental game, very personal and communicative
 - Colin Hodet — #1 ranked player in the world, Pro Signature Champion, available for 1-on-1s and Compete Membership sessions
 - Hunter Thorson — mechanics, strategy, decision making, available for 1-on-1s and Compete Membership sessions
 
@@ -176,7 +176,7 @@ STRONG CLOSE PRO PROGRAM:
 "I think the Pro Program with Richard makes the most sense for what you are dealing with. Coach in your corner every week, real plan built around your game. Want me to send you the link so you can look it over?"
 
 STRONG CLOSE COMPETE:
-"I think the Compete Membership is the right move. You get structure, stat tracking, weekly drills, and a monthly session with Colin or Hunter to keep you on track. Want me to send the link?"
+"I think the Compete Membership is the right move. You get the training library, structured drills, stat tracking, progress history, and a monthly coaching call with the coach of your choice to keep you on track. Want me to send the link?"
 
 STRONG CLOSE 1-ON-1:
 "I would start with a 1-on-1 — $45, 45 minutes, you pick Colin or Hunter, walk away knowing exactly what to fix. Here is the link: https://levelupcornhole.shop/pages/1-on-1-coaching"
@@ -243,12 +243,9 @@ app.post('/webhook', async (req, res) => {
 
       console.log(`MSG — echo:${isEcho} sender:${senderId} text:${messageText.substring(0, 40)}`);
 
-      // ECHO = message sent FROM your page
       if (isEcho) {
         const recipientId = event.recipient.id;
         const lowerText = messageText.toLowerCase();
-
-        // Only pause if Gavin explicitly says "this is gavin"
         if (lowerText.includes('this is gavin')) {
           pausedConversations.add(recipientId);
           messageCountSinceGavin[recipientId] = 0;
@@ -257,7 +254,6 @@ app.post('/webhook', async (req, res) => {
         continue;
       }
 
-      // Incoming customer message — check if paused
       if (pausedConversations.has(senderId)) {
         messageCountSinceGavin[senderId] = (messageCountSinceGavin[senderId] || 0) + 1;
         console.log(`PAUSED — msg ${messageCountSinceGavin[senderId]} from ${senderId}`);
