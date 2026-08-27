@@ -199,8 +199,8 @@ ELITE MEMBERSHIP:
 WHICH COACH TO RECOMMEND
 ===========================
 - Roll bag / specialty shots / shot development → Colin
-- Mental game / tournament prep / accountability / competing alone / Translating practice into tournament  → AJ
-- Mechanics / general development / championship coaching/ Mental Game → Richard
+- Mental game / tournament prep / accountability / competing alone / Translating practice into tournament → AJ
+- Mechanics / general development / championship coaching / Mental Game → Richard
 - Strategy and decision making → Hunter or Richard
 
 ===========================
@@ -282,6 +282,7 @@ STRONG CLOSE — COMPETE:
 
 const pausedConversations = new Set();
 const messageCountSinceGavin = {};
+const pendingResponses = new Set();
 
 function getRandomDelay() {
   return Math.floor(Math.random() * (100000 - 80000 + 1)) + 80000;
@@ -314,6 +315,12 @@ async function fetchConversationHistory(senderId) {
         role: msg.from.id === pageId ? 'assistant' : 'user',
         content: msg.message
       }));
+
+    // If the last message in the thread is from the bot we already responded — skip
+    if (history.length > 0 && history[history.length - 1].role === 'assistant') {
+      console.log(`LAST MSG WAS OURS — skipping self-reply for ${senderId}`);
+      return null;
+    }
 
     return history;
   } catch (err) {
@@ -409,6 +416,13 @@ app.post('/webhook', async (req, res) => {
         }
       }
 
+      // If already waiting to respond to this person skip — the delay will pick up all messages
+      if (pendingResponses.has(senderId)) {
+        console.log(`ALREADY PENDING for ${senderId} — skipping duplicate trigger`);
+        continue;
+      }
+
+      pendingResponses.add(senderId);
       await sendTypingOn(senderId);
 
       const delay = getRandomDelay();
@@ -426,6 +440,8 @@ app.post('/webhook', async (req, res) => {
         }
       }
 
+      pendingResponses.delete(senderId);
+
       if (wasPaused) {
         await sendTypingOff(senderId);
         continue;
@@ -433,6 +449,13 @@ app.post('/webhook', async (req, res) => {
 
       console.log(`FETCHING conversation history for ${senderId}`);
       const conversationHistory = await fetchConversationHistory(senderId);
+
+      // null means last message was ours — skip to avoid self-reply
+      if (conversationHistory === null) {
+        await sendTypingOff(senderId);
+        continue;
+      }
+
       console.log(`GOT ${conversationHistory.length} messages from history`);
 
       const gavinInHistory = conversationHistory.some(
@@ -475,6 +498,7 @@ app.post('/webhook', async (req, res) => {
         console.log(`REPLIED to ${senderId}: ${reply.substring(0, 50)}...`);
       } catch (err) {
         await sendTypingOff(senderId);
+        pendingResponses.delete(senderId);
         console.error('ERROR:', err.response?.data || err.message);
       }
     }
